@@ -5,18 +5,19 @@ from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-# Logging setup
+# Logging setup to see errors and other info
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# --- आपके चैनल की जानकारी ---
+# --- यहाँ अपने चैनलों की जानकारी डालें ---
+# हर चैनल के लिए एक key बनाएं (जैसे "danime") और उसकी जानकारी डालें।
 CHANNEL_DATA = {
     "danime": {
         "text": "Here is your link! Click below to proceed:",
         "button_text": "🔔 Request to Join",
-        "url": "https://t.me/+mUBQJuyB5FNlMTVl"
+        "url": "https://t.me/+mUBQJuyB5FNlMTVl"  # <-- यहाँ अपनी असली इनवाइट लिंक डालें
     },
     "parody": {
         "text": "Here is your link! Click below to proceed:",
@@ -28,10 +29,10 @@ CHANNEL_DATA = {
         "button_text": "🔔 Request to Join",
         "url": "https://t.me/+ypMzwwRrx1I1NGZl"
     },
-    # आप और भी चैनल ऐसे ही जोड़ सकते हैं
+    # आप और भी चैनल ऐसे ही 'key': { ... } करके जोड़ सकते हैं
 }
 
-# --- Keep-Alive सर्वर ---
+# --- UptimeRobot के लिए Keep-Alive सर्वर ---
 app = Flask('')
 @app.route('/')
 def home():
@@ -48,8 +49,8 @@ def keep_alive():
 # --- बॉट के फंक्शन्स ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/start कमांड को हैंडल करता है"""
     user = update.effective_user
-    chat_id = update.effective_chat.id
     
     # अगर /start के साथ कोई key है (जैसे ?start=danime)
     if context.args:
@@ -71,7 +72,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
-    # --- महत्वपूर्ण: एनवायरनमेंट वेरिएबल का नाम BOT_TOKEN है ---
+    """बॉट को शुरू करने वाला मेन फंक्शन"""
+    # एनवायरनमेंट वेरिएबल का नाम BOT_TOKEN है
     TOKEN = os.environ.get("BOT_TOKEN")
     if not TOKEN:
         logger.critical("Error: BOT_TOKEN not set in environment variables! Bot cannot start.")
@@ -80,6 +82,7 @@ def main():
     application = Application.builder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
 
+    # बॉट को 24/7 जगाए रखने के लिए सर्वर शुरू करें
     keep_alive()
     logger.info("Keep-alive server started.")
     
