@@ -18,12 +18,12 @@ CHANNELS = {
     "hentai": {
         "message": "Here is your link! Click below to proceed:",
         "button_text": "🔔 Request to Join",
-        "link": "https://t.me/+YourActualJoinLinkHere"  # <<--- यहाँ अपना असली ज्वाइन लिंक डालें
+        "link": "https://t.me/+ypMzwwRrx1I1NGZl"  # <<--- यहाँ अपना असली ज्वाइन लिंक डालें
     },
     "parody": {
         "message": "Here is your link! Click below to proceed:",
         "button_text": "🔔 Request to Join",
-        "link": "https://t.me/+AnotherJoinLinkHere" # <<--- यहाँ अपना असली ज्वाइन लिंक डालें
+        "link": "https://t.me/+G_BZgtePcARkN2M1" # <<--- यहाँ अपना असली ज्वाइन लिंक डालें
     },
     # आप यहाँ और चैनल जोड़ सकते हैं...
 }
