@@ -5,19 +5,18 @@ from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-# Logging setup to see errors and other info
+# Logging setup
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# --- यहाँ अपने चैनलों की जानकारी डालें ---
-# हर चैनल के लिए एक key बनाएं (जैसे "danime") और उसकी जानकारी डालें।
+# --- आपके चैनल की जानकारी ---
 CHANNEL_DATA = {
     "danime": {
         "text": "Here is your link! Click below to proceed:",
         "button_text": "🔔 Request to Join",
-        "url": "https://t.me/+mUBQJuyB5FNlMTVl"  # <-- यहाँ अपनी असली इनवाइट लिंक डालें
+        "url": "https://t.me/+mUBQJuyB5FNlMTVl"
     },
     "parody": {
         "text": "Here is your link! Click below to proceed:",
@@ -29,10 +28,9 @@ CHANNEL_DATA = {
         "button_text": "🔔 Request to Join",
         "url": "https://t.me/+ypMzwwRrx1I1NGZl"
     },
-    # आप और भी चैनल ऐसे ही 'key': { ... } करके जोड़ सकते हैं
 }
 
-# --- UptimeRobot के लिए Keep-Alive सर्वर ---
+# --- Keep-Alive सर्वर (UptimeRobot के लिए) ---
 app = Flask('')
 @app.route('/')
 def home():
@@ -49,32 +47,23 @@ def keep_alive():
 # --- बॉट के फंक्शन्स ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """/start कमांड को हैंडल करता है"""
     user = update.effective_user
-    
-    # अगर /start के साथ कोई key है (जैसे ?start=danime)
     if context.args:
         channel_key = context.args[0]
-        
         if channel_key in CHANNEL_DATA:
             data = CHANNEL_DATA[channel_key]
-            
             keyboard = [[InlineKeyboardButton(data["button_text"], url=data["url"])]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            
             await update.message.reply_text(data["text"], reply_markup=reply_markup)
             logger.info(f"Link for '{channel_key}' sent to {user.first_name}")
         else:
             await update.message.reply_text(f"Hello {user.first_name}! Sorry, yeh link valid nahi hai.")
-    # अगर सिर्फ /start भेजा गया है
     else:
         await update.message.reply_text(f"Hello {user.first_name}! Please hamare main channel se link use karein.")
 
 
 def main():
-    """बॉट को शुरू करने वाला मेन फंक्शन"""
-    # एनवायरनमेंट वेरिएबल का नाम BOT_TOKEN है
-    TOKEN = os.environ.get("BOT_TOKEN")
+    TOKEN = os.environ.get("BOT_TOKEN") # --- ध्यान दें: यहाँ BOT_TOKEN है ---
     if not TOKEN:
         logger.critical("Error: BOT_TOKEN not set in environment variables! Bot cannot start.")
         return
@@ -86,7 +75,8 @@ def main():
     keep_alive()
     logger.info("Keep-alive server started.")
     
-    logger.info("Bot is starting...")
+    # बॉट को पोलिंग मोड में चलाना
+    logger.info("Bot is starting in polling mode...")
     application.run_polling()
 
 
