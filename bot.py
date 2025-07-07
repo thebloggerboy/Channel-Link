@@ -1,87 +1,83 @@
 import os
 import logging
 import threading
+import asyncio
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-# Logging सेटअप, ताकि हमें सर्वर पर पता चले कि बॉट चल रहा है
+# Logging को कॉन्फ़िगर करें
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# --- चैनल लिंक कॉन्फ़िगरेशन ---
-# यह सबसे ज़रूरी हिस्सा है।
-# 'key': यह वो यूनिक आईडी है जो आप /start लिंक में इस्तेमाल करेंगे (जैसे ?start=hanime)
-# 'link': यह उस चैनल का असली प्राइवेट ज्वाइन लिंक है।
-
-CHANNEL_LINKS = {
-    "danime": "https://t.me/+mUBQJuyB5FNlMTVl",   # यहाँ hanime चैनल का ज्वाइन लिंक डालें
-    "hentai": "https://t.me/+ypMzwwRrx1I1NGZl",   # यहाँ parody चैनल का ज्वाइन लिंक डालें
-    "parody": "https://t.me/+G_BZgtePcARkN2M1",  # यहाँ manga18+ चैनल का ज्वाइन लिंक डालें
-    
-    # --- नए चैनल ऐसे जोड़ें ---
-    # "new_channel_key": "https://t.me/your_new_channel_join_link",
-    # "another_key": "https://t.me/another_join_link",
+# --- चैनल कॉन्फ़िगरेशन ---
+# यहीं पर आप अपने सभी चैनलों को मैनेज करेंगे।
+CHANNELS = {
+    "hentai": {
+        "message": "Here is your link! Click below to proceed:",
+        "button_text": "🔔 Request to Join",
+        "link": "https://t.me/+ypMzwwRrx1I1NGZl"  # <<--- यहाँ अपना असली ज्वाइन लिंक डालें
+    },
+    "parody": {
+        "message": "Here is your link! Click below to proceed:",
+        "button_text": "🔔 Request to Join",
+        "link": "https://t.me/+G_BZgtePcARkN2M1" # <<--- यहाँ अपना असली ज्वाइन लिंक डालें
+    },
+    # आप यहाँ और चैनल जोड़ सकते हैं...
 }
 
-# --- बॉट का मुख्य फंक्शन ---
-
+# --- बॉट के फंक्शन ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """यह फंक्शन /start कमांड पर चलता है।"""
+    """यह फंक्शन तब चलता है जब कोई यूजर /start कमांड भेजता है।"""
+    user = update.effective_user
     args = context.args
 
     if args:
-        # अगर /start के साथ कोई की (key) भेजी गई है (जैसे ?start=hanime)
         channel_key = args[0]
-        join_link = CHANNEL_LINKS.get(channel_key)
+        channel_data = CHANNELS.get(channel_key)
 
-        if join_link:
-            # अगर key हमारी डिक्शनरी में मौजूद है, तो बटन बनाएँ
-            message_text = "Here is your link! Click below to proceed:"
-            button_text = "🔔 Request to Join"
-            
-            keyboard = [[InlineKeyboardButton(button_text, url=join_link)]]
+        if channel_data:
+            keyboard = [[InlineKeyboardButton(channel_data["button_text"], url=channel_data["link"])]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            
-            await update.message.reply_text(message_text, reply_markup=reply_markup)
+            await update.message.reply_text(channel_data["message"], reply_markup=reply_markup)
         else:
-            # अगर key मौजूद नहीं है
-            await update.message.reply_text("This link seems to be invalid or expired. Please try again from our main channel.")
+            await update.message.reply_text(f"नमस्ते {user.mention_html()}!\n\nयह लिंक शायद काम नहीं कर रहा है। कृपया हमारे मुख्य चैनल से दोबारा प्रयास करें।", parse_mode='HTML')
     else:
-        # अगर किसी ने सीधे बॉट को /start किया है
-        await update.message.reply_text("Welcome! Please use a link from one of our channels to get access.")
+        await update.message.reply_text(f"नमस्ते {user.mention_html()}!\n\nयह एक गेटवे बॉट है। कृपया हमारे मुख्य चैनल पर जाकर किसी बटन पर क्लिक करें।", parse_mode='HTML')
 
-# --- Render.com के लिए वेब सर्वर (इसे 24/7 जगाए रखने के लिए) ---
+# --- Render.com के लिए वेब सर्वर ---
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return "Bot is alive and running!"
+    return "Bot is running!"
 
-# --- बॉट और वेब सर्वर को चलाने का कोड ---
+# --- बॉट को चलाने के लिए सही तरीका ---
+def run_bot_polling(application):
+    """यह फंक्शन एक नए थ्रेड में बॉट को सही तरीके से चलाता है।"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(application.run_polling())
+    finally:
+        loop.close()
 
-def main():
-    # एनवायरनमेंट से बॉट टोकन लें
+# --- मुख्य प्रोग्राम ---
+if __name__ == "__main__":
     BOT_TOKEN = os.environ.get("BOT_TOKEN")
     if not BOT_TOKEN:
-        logger.error("FATAL: BOT_TOKEN environment variable not set.")
-        return
+        raise ValueError("BOT_TOKEN एनवायरनमेंट वेरिएबल सेट नहीं है!")
 
     # Telegram एप्लीकेशन सेट करें
     application = Application.builder().token(BOT_TOKEN).build()
-
-    # /start कमांड के लिए हैंडलर जोड़ें
     application.add_handler(CommandHandler("start", start))
 
-    # बॉट को एक अलग थ्रेड में चलाएं ताकि वेब सर्वर ब्लॉक न हो
-    threading.Thread(target=application.run_polling, daemon=True).start()
+    # एक अलग थ्रेड में बॉट को चलाएं
+    bot_thread = threading.Thread(target=run_bot_polling, args=(application,), daemon=True)
+    bot_thread.start()
     
-    logger.info("Telegram Bot has started polling...")
+    logger.info("बॉट का थ्रेड शुरू हो गया है। Gunicorn अब मुख्य थ्रेड को संभालेगा।")
     
-    # यह 'app' ऑब्जेक्ट Gunicorn द्वारा Render पर चलाया जाएगा।
-    # लोकल टेस्टिंग के लिए, आप app.run() का उपयोग कर सकते हैं।
-
-# Gunicorn को 'app' ऑब्जेक्ट की जरूरत होती है, इसलिए इसे ग्लोबल स्कोप में रखते हैं
-main()
+    # Gunicorn इस 'app' ऑब्जेक्ट को ढूंढेगा और चलाएगा।
